@@ -19704,3 +19704,69 @@ trainings_json = """
 data = json.loads(trainings_json)
 
 # Continue with processing functions...
+def count_trainings(data):
+    training_counts = {}
+    for person in data:
+        for completion in person["completions"]:
+            training_name = completion["name"]
+            if training_name in training_counts:
+                training_counts[training_name] += 1
+            else:
+                training_counts[training_name] = 1
+    return training_counts
+
+# Assume 'data' is your parsed JSON data.
+# Now we will call the function and print the results.
+training_counts = count_trainings(data)
+print(json.dumps(training_counts, indent=2))
+
+# Second Function
+def completions_in_fiscal_year(data, trainings, fiscal_year):
+    fiscal_year_start = datetime(fiscal_year - 1, 7, 1)
+    fiscal_year_end = datetime(fiscal_year, 6, 30)
+    training_completions = {training: [] for training in trainings}
+
+    for person in data:
+        for completion in person["completions"]:
+            training_name = completion["name"]
+            if training_name in trainings:
+                completion_date = datetime.strptime(completion["timestamp"], "%m/%d/%Y")
+                if fiscal_year_start <= completion_date <= fiscal_year_end:
+                    training_completions[training_name].append(person["name"])
+
+    return training_completions
+
+# Example usage:
+specified_trainings = ["Electrical Safety for Labs", "X-Ray Safety", "Laboratory Safety Training"]
+fiscal_year_completions = completions_in_fiscal_year(data, specified_trainings, 2024)
+print(json.dumps(fiscal_year_completions, indent=2))
+
+# Third Functio
+def find_expiring_trainings(data, reference_date):
+    reference_date = datetime.strptime(reference_date, "%m/%d/%Y")
+    people_with_expiring_trainings = {}
+
+    for person in data:
+        for completion in person["completions"]:
+            training_name = completion["name"]
+            completion_date = datetime.strptime(completion["timestamp"], "%m/%d/%Y")
+            expiration_date = completion_date + timedelta(days=365)  # 1 year after completion by default
+
+            if 'expires' in completion and completion['expires']:
+                expiration_date = datetime.strptime(completion["expires"], "%m/%d/%Y")
+
+            if (expiration_date - reference_date).days <= 30:
+                status = "expires soon" if expiration_date > reference_date else "expired"
+                if person["name"] not in people_with_expiring_trainings:
+                    people_with_expiring_trainings[person["name"]] = []
+                
+                people_with_expiring_trainings[person["name"]].append({
+                    "training": training_name,
+                    "status": status
+                })
+
+    return people_with_expiring_trainings
+
+# Example usage:
+expiring_trainings = find_expiring_trainings(data, "10/1/2023")
+print(json.dumps(expiring_trainings, indent=2))
